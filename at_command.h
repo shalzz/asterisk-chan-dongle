@@ -54,6 +54,7 @@
 	_( AT_CREG_INIT,    "AT+CREG=") \
 	_( AT_CSCS,         "AT+CSCS") \
 	_( AT_CSQ,          "AT+CSQ") \
+	_( AT_HCSQ,         "AT+HCSQ") \
 \
 	_( AT_CSSN,         "AT+CSSN") \
 	_( AT_CUSD,         "AT+CUSD") \

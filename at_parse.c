@@ -546,6 +546,25 @@ EXPORT_DEF int at_parse_csq (const char* str, int* rssi)
 }
 
 /*!
+ * \brief Parse ^HCSQ response
+ * \param str -- string to parse (null terminated)
+ * \return -1 on error (parse error) or the rssi value
+ */
+
+EXPORT_DEF int at_parse_hcsq (const char* str)
+{
+        char* network = "UNKNOWN";
+	int rssi = -1;
+
+	/*
+	 * parse +HCSQ response in the following format:
+	 * +HCSQ: <BER>,<RSSI>
+	 */
+	sscanf (str, "+CSQ:%s,%2d,", network, &rssi);
+        return rssi;
+}
+
+/*!
  * \brief Parse a ^RSSI notification
  * \param str -- string to parse (null terminated)
  * \param len -- string lenght
