@@ -118,7 +118,7 @@ EXPORT_DEF int at_enqueue_initialization(struct cpvt *cpvt, at_cmd_t from_comman
 	static const char cmd7[] = "AT+CGMM\r";
 	static const char cmd8[] = "AT+CGMR\r";
 
-	static const char cmd9[] = "AT+CMEE=0\r";
+	static const char cmd9[] = "AT+CMEE=2\r";
 	static const char cmd10[] = "AT+CGSN\r";
 	static const char cmd11[] = "AT+CIMI\r";
 	static const char cmd12[] = "AT+CPIN?\r";
@@ -137,6 +137,7 @@ EXPORT_DEF int at_enqueue_initialization(struct cpvt *cpvt, at_cmd_t from_comman
 	static const char cmd22[] = "AT+CPMS=\"SM\",\"SM\",\"SM\"\r";
 	static const char cmd23[] = "AT+CNMI=2,1,0,2,0\r";
 	static const char cmd24[] = "AT+CSQ\r";
+	static const char cmd25[] = "AT+CGATT=1\r";
 
 	static const at_queue_cmd_t st_cmds[] = {
 		ATQ_CMD_DECLARE_ST(CMD_AT, cmd_at),
@@ -156,7 +157,8 @@ EXPORT_DEF int at_enqueue_initialization(struct cpvt *cpvt, at_cmd_t from_comman
 
 		ATQ_CMD_DECLARE_STI(CMD_AT_CREG_INIT,cmd14),	/* GSM registration status setting */
 		ATQ_CMD_DECLARE_ST(CMD_AT_CREG, cmd15),		/* GSM registration status */
-//		ATQ_CMD_DECLARE_STI(CMD_AT_CNUM, cmd16),		/* Get Subscriber number */
+		ATQ_CMD_DECLARE_ST(CMD_AT_CGATT_INIT, cmd25),   /* Attach to GPRS service */
+		ATQ_CMD_DECLARE_STI(CMD_AT_CNUM, cmd16),        /* Get Subscriber number */
 		ATQ_CMD_DECLARE_ST(CMD_AT_CVOICE, cmd17),	/* read the current voice mode, and return sampling rate、data bit、frame period */
 
 		ATQ_CMD_DECLARE_ST(CMD_AT_CSCA, cmd6),		/* Get SMS Service center address */

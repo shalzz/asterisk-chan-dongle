@@ -52,6 +52,8 @@
 \
 	_( AT_CREG,         "AT+CREG?") \
 	_( AT_CREG_INIT,    "AT+CREG=") \
+	_( AT_CGATT,        "AT+CGATT?") \
+	_( AT_CGATT_INIT,   "AT+CGATT=") \
 	_( AT_CSCS,         "AT+CSCS") \
 	_( AT_CSQ,          "AT+CSQ") \
 	_( AT_HCSQ,         "AT+HCSQ") \
