@@ -29,11 +29,11 @@
 #include "smsdb.h"
 #include "error.h"
 
-static const char cmd_at[] 	 = "AT\r";
+static const char cmd_at[]		 = "AT\r";
 static const char cmd_chld1x[]   = "AT+CHLD=1%d\r";
 static const char cmd_chld2[]    = "AT+CHLD=2\r";
 static const char cmd_clcc[]     = "AT+CLCC\r";
-static const char cmd_ddsetex2[] = "AT^DDSETEX=2\r";
+static const char cmd_ddsetex2[] = "AT^DDSETEX=2\r"; //"AT\r"
 static const char cmd_qpcmv10[]  = "AT+QPCMV=1,0\r";
 
 /*!
@@ -115,7 +115,7 @@ EXPORT_DEF int at_enqueue_initialization(struct cpvt *cpvt, at_cmd_t from_comman
 		/* AT */
 		ATQ_CMD_DECLARE_ST(CMD_AT, cmd_at),
 		/* optional,  reload configuration */
-		ATQ_CMD_DECLARE_ST(CMD_AT_Z, "ATZ\r"),
+		ATQ_CMD_DECLARE_ST(CMD_AT_Z, "ATZ\r"), // "AT^DSCI=1\r";
 		/* disable echo */
 		ATQ_CMD_DECLARE_ST(CMD_AT_E, "ATE0\r"),
 		/* optional, Enable or disable some devices */
@@ -151,6 +151,7 @@ EXPORT_DEF int at_enqueue_initialization(struct cpvt *cpvt, at_cmd_t from_comman
 		 * rate, data bit, frame period */
 		ATQ_CMD_DECLARE_STI(CMD_AT_CVOICE, "AT^CVOICE?\r"),
 		ATQ_CMD_DECLARE_STI(CMD_AT_QPCMV, "AT+QPCMV?\r"), /* for Quectel */
+		ATQ_CMD_DECLARE_STI(CMD_AT_CVOICE2, "AT+CPCMREG?\r"),
 
 		/* Get SMS Service center address */
 		ATQ_CMD_DECLARE_ST(CMD_AT_CSCA, "AT+CSCA?\r"),
@@ -352,7 +353,7 @@ EXPORT_DEF int at_enqueue_ussd(struct cpvt *cpvt, const char *code)
 		chan_dongle_err = E_ENCODE_GSM7;
 		return -1;
 	}
-	res = gsm7_pack(code16, res, (char*)code_packed, sizeof(code_packed), 0);
+	res = gsm7_pack(code16, res, code_packed, sizeof(code_packed), 0);
 	if (res < 0) {
 		chan_dongle_err = E_PACK_GSM7;
 		return -1;
@@ -414,7 +415,7 @@ EXPORT_DEF int at_enqueue_dtmf(struct cpvt *cpvt, char digit)
 
 		case '*':
 		case '#':
-			return at_enqueue_generic(cpvt, CMD_AT_DTMF, 1, "AT^DTMF=%d,%c\r", cpvt->call_idx, digit);
+			return at_enqueue_generic(cpvt, CMD_AT_DTMF, 1, "AT+VTS=%c\r", digit);
 	}
 	return -1;
 }
@@ -499,6 +500,7 @@ EXPORT_DEF int at_enqueue_dial(struct cpvt *cpvt, const char *number, int clir)
 	char * tmp = NULL;
 	at_queue_cmd_t cmds[6];
 
+
 	if(PVT_STATE(pvt, chan_count[CALL_STATE_ACTIVE]) > 0 && CPVT_TEST_FLAG(cpvt, CALL_FLAG_HOLD_OTHER))
 	{
 		ATQ_CMD_INIT_ST(cmds[0], CMD_AT_CHLD_2, cmd_chld2);
@@ -519,8 +521,12 @@ EXPORT_DEF int at_enqueue_dial(struct cpvt *cpvt, const char *number, int clir)
 		ATQ_CMD_INIT_DYNI(cmds[cmdsno], CMD_AT_CLIR);
 		cmdsno++;
 	}
-
-	err = at_fill_generic_cmd(&cmds[cmdsno], "ATD%s;\r", number);
+        if (pvt->is_simcom) {
+	err = at_fill_generic_cmd(&cmds[cmdsno], "AT+CPCMREG=0;D%s;\r", number); }
+        else if (strcmp(CONF_UNIQ(pvt, quec_uac),"1") == 0) {
+        err = at_fill_generic_cmd(&cmds[cmdsno], "AT+QPCMV=0;+QPCMV=1,2;D%s;\r", number); }
+        else {
+        err = at_fill_generic_cmd(&cmds[cmdsno], "AT+QPCMV=0;+QPCMV=1,0;D%s;\r", number); }
 	if(err)
 	{
 		ast_free(tmp);
@@ -535,12 +541,9 @@ EXPORT_DEF int at_enqueue_dial(struct cpvt *cpvt, const char *number, int clir)
 	ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_CLCC, cmd_clcc);
 	cmdsno++;
 
-	if (pvt->has_voice_quectel) {
-		ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_DDSETEX, cmd_qpcmv10);
-	} else {
-		ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_DDSETEX, cmd_ddsetex2);
-	}
-	cmdsno++;
+/*	ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_DDSETEX, cmd_ddsetex2);
+	cmdsno++; */
+
 
 	if (at_queue_insert(cpvt, cmds, cmdsno, 1) != 0) {
 		chan_dongle_err = E_QUEUE;
@@ -559,21 +562,23 @@ EXPORT_DEF int at_enqueue_dial(struct cpvt *cpvt, const char *number, int clir)
 EXPORT_DEF int at_enqueue_answer(struct cpvt *cpvt)
 {
 	pvt_t* pvt = cpvt->pvt;
-	at_queue_cmd_t cmds[2];
-	unsigned count = 2; /* AT_A + setup-voice */
+	at_queue_cmd_t cmds[] = {
+		ATQ_CMD_DECLARE_DYN(CMD_AT_A),
+//		ATQ_CMD_DECLARE_ST(CMD_AT_DDSETEX, cmd_ddsetex2),
+		};\
+	int count = ITEMS_OF(cmds);
 	const char * cmd1;
-
-	ATQ_CMD_INIT_DYN(cmds[0], CMD_AT_A);
-	if (pvt->has_voice_quectel) {
-		ATQ_CMD_INIT_ST(cmds[1], CMD_AT_DDSETEX, cmd_qpcmv10);
-	} else {
-		ATQ_CMD_INIT_ST(cmds[1], CMD_AT_DDSETEX, cmd_ddsetex2);
-	}
 
 	if(cpvt->state == CALL_STATE_INCOMING)
 	{
 /* FIXME: channel number? */
-		cmd1 = "ATA\r";
+             if (pvt->is_simcom) {
+		cmd1 = "AT+CPCMREG=0;A\r"; }
+             else if (strcmp(CONF_UNIQ(pvt, quec_uac),"1") == 0) { 
+                cmd1 = "AT+QPCMV=0;+QPCMV=1,2;A\r"; }
+             else { 
+                cmd1 = "AT+QPCMV=0;+QPCMV=1,0;A\r"; }
+
 	}
 	else if(cpvt->state == CALL_STATE_WAITING)
 	{
@@ -596,6 +601,11 @@ EXPORT_DEF int at_enqueue_answer(struct cpvt *cpvt)
 		chan_dongle_err = E_QUEUE;
 		return -1;
 	}
+             if (pvt->is_simcom) {
+
+                sleep(1);
+                voice_enable(pvt);
+                                  }
 	return 0;
 }
 

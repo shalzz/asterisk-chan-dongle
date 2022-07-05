@@ -12,8 +12,8 @@
 #include "export.h"				/* EXPORT_DECL EXPORT_DEF */
 #include "mixbuffer.h"				/* struct mixstream */
 #include "mutils.h"				/* enum2str() ITEMS_OF() */
-
 #define FRAME_SIZE		320
+#define FRAME_SIZE2		160
 
 typedef enum {
 	CALL_STATE_MIN		= 0,
@@ -70,7 +70,7 @@ typedef struct cpvt {
 #define PIPE_WRITE		1
 
 	struct mixstream	mixstream;			/*!< mix stream */
-	char			a_read_buf[FRAME_SIZE + AST_FRIENDLY_OFFSET];/*!< audio read buffer */
+	char			a_read_buf[FRAME_SIZE*2 + AST_FRIENDLY_OFFSET];/*!< audio read buffer */
 	struct ast_frame	a_read_frame;			/*!< read frame buffer */
 
 //	size_t			write;				/*!< write position in pvt->a_write_buf */
@@ -93,6 +93,9 @@ EXPORT_DECL struct cpvt * cpvt_alloc(struct pvt * pvt, int call_idx, unsigned di
 EXPORT_DECL void cpvt_free(struct cpvt* cpvt);
 
 EXPORT_DECL struct cpvt * pvt_find_cpvt(struct pvt * pvt, int call_idx);
+EXPORT_DECL struct cpvt * active_cpvt(struct pvt * pvt);
+EXPORT_DECL void voice_enable(struct pvt * pvt);
+EXPORT_DECL void voice_disable(struct pvt * pvt);
 EXPORT_DECL const char * pvt_call_dir(const struct pvt * pvt);
 
 #/* */

@@ -20,7 +20,7 @@
 #define AT_COMMANDS_TABLE(_) \
 	_( USER,            "USER'S") \
 	_( AT,              "AT") \
-	_( AT_A,            "ATA") \
+	_( AT_A,            "at+qpcmv=0;+qpcmv=1,0;a") \
 	_( AT_CCWA_STATUS,  "AT+CCWA?") \
 	_( AT_CCWA_SET,     "AT+CCWA=") \
 	_( AT_CFUN,         "AT+CFUN") \
@@ -32,7 +32,7 @@
 \
 	_( AT_CHUP,         "AT+CHUP") \
 	_( AT_CIMI,         "AT+CIMI") \
-/*	_( AT_CLIP,         "AT+CLIP") */ \
+	_( AT_CVOICE2,      "AT+CPCMREG?") \
 	_( AT_CLIR,         "AT+CLIR") \
 \
 	_( AT_CLVL,         "AT+CLVL") \
@@ -57,14 +57,11 @@
 \
 	_( AT_CSSN,         "AT+CSSN") \
 	_( AT_CUSD,         "AT+CUSD") \
-	_( AT_CVOICE,       "AT^CVOICE") \
-	_( AT_D,            "ATD") \
+	_( AT_CVOICE,       "AT+QPCMV?") \
+	_( AT_D,            "AT+CPCMREG=0;D") \
 \
-	/* set the destination port of voice after a voice call is
-	 * established */ \
-	_( AT_DDSETEX,      "AT^DDSETEX") \
-	/* same, but for Quectel EC25 */ \
-	_( AT_QPCMV,        "AT+QPCMV") \
+	_( AT_DDSETEX,      "AT+CPCMREG=1") \
+        _( AT_DDSETEX0,     "AT+CPCMREG=0") \
 	_( AT_DTMF,         "AT^DTMF") \
 	_( AT_E,            "ATE") \
 \
