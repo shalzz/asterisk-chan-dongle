@@ -390,6 +390,7 @@ EXPORT_DEF int at_enqueue_ussd(struct cpvt *cpvt, const char *code)
 
 EXPORT_DEF int at_enqueue_dtmf(struct cpvt *cpvt, char digit)
 {
+	struct pvt *pvt = cpvt->pvt;
 	switch (digit)
 	{
 /* unsupported, but AT^DTMF=1,22 OK and "2" sent
@@ -416,7 +417,11 @@ EXPORT_DEF int at_enqueue_dtmf(struct cpvt *cpvt, char digit)
 
 		case '*':
 		case '#':
-			return at_enqueue_generic(cpvt, CMD_AT_DTMF, 1, "AT^DTMF=%d,%c\r", cpvt->call_idx, digit);
+			if (pvt->has_voice_simcom) {
+				return at_enqueue_generic(cpvt, CMD_AT_DTMF, 1, "AT+VTS=%c\r", digit);
+			} else {
+				return at_enqueue_generic(cpvt, CMD_AT_DTMF, 1, "AT^DTMF=%d,%c\r", cpvt->call_idx, digit);
+			}
 	}
 	return -1;
 }
