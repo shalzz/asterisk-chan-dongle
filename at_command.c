@@ -35,6 +35,7 @@ static const char cmd_chld2[]    = "AT+CHLD=2\r";
 static const char cmd_clcc[]     = "AT+CLCC\r";
 static const char cmd_ddsetex2[] = "AT^DDSETEX=2\r";
 static const char cmd_qpcmv10[]  = "AT+QPCMV=1,0\r";
+static const char cmd_cpcmreg0[] = "AT+CPCMREG=0\r";
 
 /*!
  * \brief Format and fill generic command
@@ -151,6 +152,7 @@ EXPORT_DEF int at_enqueue_initialization(struct cpvt *cpvt, at_cmd_t from_comman
 		 * rate, data bit, frame period */
 		ATQ_CMD_DECLARE_STI(CMD_AT_CVOICE, "AT^CVOICE?\r"),
 		ATQ_CMD_DECLARE_STI(CMD_AT_QPCMV, "AT+QPCMV?\r"), /* for Quectel */
+		ATQ_CMD_DECLARE_STI(CMD_AT_CPCMREG, "AT+CPCMREG?\r"), /* for Simcom */
 
 		/* Get SMS Service center address */
 		ATQ_CMD_DECLARE_ST(CMD_AT_CSCA, "AT+CSCA?\r"),
@@ -537,6 +539,8 @@ EXPORT_DEF int at_enqueue_dial(struct cpvt *cpvt, const char *number, int clir)
 
 	if (pvt->has_voice_quectel) {
 		ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_DDSETEX, cmd_qpcmv10);
+	} else if (pvt->has_voice_simcom) {
+		ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_DDSETEX, cmd_cpcmreg0);
 	} else {
 		ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_DDSETEX, cmd_ddsetex2);
 	}
@@ -566,6 +570,8 @@ EXPORT_DEF int at_enqueue_answer(struct cpvt *cpvt)
 	ATQ_CMD_INIT_DYN(cmds[0], CMD_AT_A);
 	if (pvt->has_voice_quectel) {
 		ATQ_CMD_INIT_ST(cmds[1], CMD_AT_DDSETEX, cmd_qpcmv10);
+	} else if (pvt->has_voice_simcom) {
+		ATQ_CMD_INIT_ST(cmds[1], CMD_AT_DDSETEX, cmd_cpcmreg0);
 	} else {
 		ATQ_CMD_INIT_ST(cmds[1], CMD_AT_DDSETEX, cmd_ddsetex2);
 	}

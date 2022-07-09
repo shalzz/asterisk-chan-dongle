@@ -126,11 +126,19 @@ static int at_response_ok (struct pvt* pvt, at_res_t res)
 				ast_debug (1, "[%s] Dongle has voice support\n", PVT_ID(pvt));
 				pvt->has_voice = 1;
 				pvt->has_voice_quectel = 0;
+				pvt->has_voice_simcom= 0;
 				break;
 			case CMD_AT_QPCMV:
 				ast_debug (1, "[%s] Dongle has Quectel voice support\n", PVT_ID(pvt));
 				pvt->has_voice = 1;
 				pvt->has_voice_quectel = 1;
+				pvt->has_voice_simcom= 0;
+				break;
+			case CMD_AT_CPCMREG:
+				ast_debug (1, "[%s] Dongle has Simcom voice support\n", PVT_ID(pvt));
+				pvt->has_voice = 1;
+				pvt->has_voice_quectel = 0;
+				pvt->has_voice_simcom= 1;
 				break;
 /*
 			case CMD_AT_CLIP:
@@ -370,8 +378,12 @@ static int at_response_error (struct pvt* pvt, at_res_t res)
 			case CMD_AT_QPCMV:
 				ast_debug(1, "[%s] Dongle has NO (QPCMV) voice support\n", PVT_ID(pvt));
 				pvt->has_voice_quectel = 0;
+				break;
+			case CMD_AT_CPCMREG:
+				ast_debug(1, "[%s] Dongle has NO (CPCMREG) voice support\n", PVT_ID(pvt));
+				pvt->has_voice_simcom = 0;
 
-				if (pvt->has_voice == 0) {
+				if (pvt->has_voice == 0 && pvt->has_voice_quectel == 0) {
 					ast_log(LOG_WARNING, "[%s] Dongle has NO voice support\n", PVT_ID(pvt));
 				}
 				break;

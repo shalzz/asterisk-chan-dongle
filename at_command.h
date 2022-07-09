@@ -65,6 +65,8 @@
 	_( AT_DDSETEX,      "AT^DDSETEX") \
 	/* same, but for Quectel EC25 */ \
 	_( AT_QPCMV,        "AT+QPCMV") \
+	/* for Simcom SIM7600 */ \
+	_( AT_CPCMREG,      "AT+CPCMREG") \
 	_( AT_DTMF,         "AT^DTMF") \
 	_( AT_E,            "ATE") \
 \

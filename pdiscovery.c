@@ -69,6 +69,7 @@ static const struct pdiscovery_device device_ids[] = {
 	{ 0x12d1, 0x1436, { 4, 3, /* 0 */ } },		/* E1750 */
 	{ 0x12d1, 0x1506, { 3, 2, /* 0 */ } },		/* E171 firmware 21.x : thanks Sergey Ivanov */
 	{ 0x2c7c, 0x0125, { 1, 4, /* 0 */ } },		/* Dongle EC25-A LTE modem */
+	{ 0x1e0e, 0x9001, { 2, 4, /* 0 */ } },          /* Simcom Sim7600 */
 };
 
 static struct discovery_cache cache;
