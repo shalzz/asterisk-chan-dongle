@@ -153,6 +153,7 @@ EXPORT_DEF int at_enqueue_initialization(struct cpvt *cpvt, at_cmd_t from_comman
 		ATQ_CMD_DECLARE_STI(CMD_AT_CVOICE, "AT^CVOICE?\r"),
 		ATQ_CMD_DECLARE_STI(CMD_AT_QPCMV, "AT+QPCMV?\r"), /* for Quectel */
 		ATQ_CMD_DECLARE_STI(CMD_AT_CPCMREG, "AT+CPCMREG?\r"), /* for Simcom */
+		ATQ_CMD_DECLARE_STI(CMD_AT_DSCI, "AT^DSCI=1\r"),
 
 		/* Get SMS Service center address */
 		ATQ_CMD_DECLARE_ST(CMD_AT_CSCA, "AT+CSCA?\r"),
@@ -538,10 +539,6 @@ EXPORT_DEF int at_enqueue_dial(struct cpvt *cpvt, const char *number, int clir)
 	ATQ_CMD_INIT_DYNI(cmds[cmdsno], CMD_AT_D);
 	cmdsno++;
 
-/* on failed ATD this up held call */
-	ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_CLCC, cmd_clcc);
-	cmdsno++;
-
 	if (pvt->has_voice_quectel) {
 		ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_DDSETEX, cmd_qpcmv10);
 	} else if (pvt->has_voice_simcom) {
@@ -549,6 +546,10 @@ EXPORT_DEF int at_enqueue_dial(struct cpvt *cpvt, const char *number, int clir)
 	} else {
 		ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_DDSETEX, cmd_ddsetex2);
 	}
+	cmdsno++;
+
+/* on failed ATD this up held call */
+	ATQ_CMD_INIT_ST(cmds[cmdsno], CMD_AT_CLCC, cmd_clcc);
 	cmdsno++;
 
 	if (at_queue_insert(cpvt, cmds, cmdsno, 1) != 0) {
@@ -975,6 +976,24 @@ EXPORT_DEF int at_enqueue_conference(struct cpvt *cpvt)
 		};
 
 	if (at_queue_insert_const(cpvt, cmds, ITEMS_OF(cmds), 1) != 0) {
+		chan_dongle_err = E_QUEUE;
+		return -1;
+	}
+	return 0;
+}
+
+/*!
+ * \brief Enqueue AT+CPCMREG command
+ * \param cpvt -- cpvt structure
+ * \return 0 on success
+ */
+EXPORT_DEF int at_enqueue_cpcmreg(struct cpvt *cpvt, int call_type)
+{
+	char cmd_cpcmreg[20];
+	snprintf(cmd_cpcmreg, sizeof(cmd_cpcmreg), "AT+CPCMREG=%d\r", call_type);
+	const at_queue_cmd_t at_cmd = ATQ_CMD_DECLARE_STIT(CMD_AT_CPCMREG, cmd_cpcmreg, ATQ_CMD_TIMEOUT_MEDIUM, 0);
+
+	if (at_queue_insert_const(&cpvt->pvt->sys_chan, &at_cmd, 1, 1) != 0) {
 		chan_dongle_err = E_QUEUE;
 		return -1;
 	}

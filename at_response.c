@@ -35,6 +35,14 @@
 #define CLCC_CALL_TYPE_DATA	1
 #define CLCC_CALL_TYPE_FAX	2
 
+#define DSCI_CALL_STATE_HOLD		1
+#define DSCI_CALL_STATE_ORIGINAL	2
+#define DSCI_CALL_STATE_CONNECT		3
+#define DSCI_CALL_STATE_INCOMING	4
+#define DSCI_CALL_STATE_WAITING		5
+#define DSCI_CALL_STATE_END			6
+#define DSCI_CALL_STATE_ALERTING	7
+
 static const at_response_t at_responses_list[] = {
 
 	AT_RESPONSES_TABLE(AT_RES_AS_STRUCTLIST)
@@ -673,6 +681,208 @@ static int at_response_orig (struct pvt* pvt, const char* str)
 	}
 	return 0;
 }
+
+/*!
+ * \brief Handle ^DSCI response
+ * \param pvt -- pvt structure
+ * \param str -- string containing response (null terminated)
+ * \retval  0 success
+ * \retval -1 error
+ */
+
+static int at_response_dsci (struct pvt* pvt, const char* str)
+{
+	int call_index;
+	int call_type;
+	int call_state;
+	struct cpvt * cpvt = NULL;
+
+	/*
+	 * parse DSCI info in the following format:
+	 * ^DSCI: <id>,<dir>,<stat>,<type>,<number>,<num_type>,<tone_info>
+	 *
+	 * Parameters
+	 * <id>			Call ID
+	 * <dir>		Call direction
+	 * <stat>		Call state
+	 *				1 CALL_HOLD
+	 *				2 CALL_ORIGINAL
+	 *				3 CALL_CONNECT
+	 *				4 CALL_INCOMING
+	 *				5 CALL_WAITING
+	 *				6 CALL_END
+	 *				7 CALL_ALERTING
+	 * <type>		Call type
+	 *				0 Voice call
+	 *				1 PS call
+	 * <number>		Phone number
+	 * <num_type>	Type of phone number
+	 * <tone_info>	Information of host play tone
+	 *				0 Host play tone
+	 *				1 Host not play tone
+	 */
+	if (sscanf (str, "^DSCI:%d,%*d,%d,%d", &call_index, &call_state, &call_type) != 3)
+	{
+		ast_log (LOG_ERROR, "[%s] Error parsing DSCI event '%s'\n", PVT_ID(pvt), str);
+		return -1;
+	}
+
+	ast_debug (1, "[%s] DSCI Received call_index: %d call_state: %d call_type %d\n", PVT_ID(pvt), call_index, call_state, call_type);
+
+	//cpvt = pvt_find_cpvt(pvt, call_index);
+	cpvt = pvt->last_dialed_cpvt;
+	pvt->last_dialed_cpvt = NULL;
+	if(!cpvt)
+	{
+		ast_log (LOG_ERROR, "[%s] ^DSCI '%s' for unknown ATD\n", PVT_ID(pvt), str);
+		return 0;
+	}
+
+	if (call_type == CLCC_CALL_TYPE_VOICE)
+	{
+
+		switch (call_state) {
+			case DSCI_CALL_STATE_ORIGINAL:
+				if(call_index >= MIN_CALL_IDX && call_index <= MAX_CALL_IDX)
+				{
+					cpvt->call_idx = call_index;
+					at_enqueue_cpcmreg(cpvt, 1);
+					change_channel_state(cpvt, CALL_STATE_DIALING, 0);
+					/*
+					if(pvt->volume_sync_step == VOLUME_SYNC_BEGIN)
+					{
+						pvt->volume_sync_step = VOLUME_SYNC_BEGIN;
+						if (at_enqueue_volsync(cpvt))
+						{
+							ast_log (LOG_ERROR, "[%s] Error synchronize audio level\n", PVT_ID(pvt));
+						}
+						else
+							pvt->volume_sync_step++;
+					}
+					*/
+
+					request_clcc(pvt);
+				}
+				break;
+			case DSCI_CALL_STATE_CONNECT:
+				// cpvt = pvt_find_cpvt(pvt, call_index);
+				if(cpvt)
+				{
+					PVT_STAT(pvt, calls_answered[cpvt->dir]) ++;
+					change_channel_state(cpvt, CALL_STATE_ACTIVE, 0);
+					if(CPVT_TEST_FLAG(cpvt, CALL_FLAG_CONFERENCE))
+						at_enqueue_conference(cpvt);
+				}
+				else
+				{
+					// at_enqueue_hangup(&pvt->sys_chan, call_index);
+					ast_log (LOG_ERROR, "[%s] answered incoming call with not exists call idx %d, hanging up!\n", PVT_ID(pvt), call_index);
+				}
+				break;
+		}
+	}
+	else
+	{
+		ast_log (LOG_ERROR, "[%s] DSCI event for non-voice call type '%d' index %d\n", PVT_ID(pvt), call_type, call_index);
+	}
+	return 0;
+}
+
+
+/*
+static int at_response_dsci2 (struct pvt* pvt, const char* str)
+{
+	int call_index;
+	int call_type;
+
+    if (sscanf (str, "^DSCI:%d,%*d,3,%d,%*s", &call_index, &call_type) == 2 && call_type == 0)
+    {
+		struct cpvt * cpvt;
+		request_clcc(pvt);
+
+		pvt->ring = 0;
+		pvt->dialing = 0;
+		pvt->cwaiting = 0;
+
+		ast_debug (1, "[%s] CONN Received call_index %d call_type %d\n", PVT_ID(pvt), call_index, call_type);
+
+		if (call_type == CLCC_CALL_TYPE_VOICE)
+		{
+			cpvt = pvt_find_cpvt(pvt, call_index);
+			if(cpvt)
+			{
+				if (!pvt->is_simcom) pvt->t0 = uptime();
+				pvt->call_estb = 1;
+				PVT_STAT(pvt, calls_answered[cpvt->dir]) ++;
+				change_channel_state(cpvt, CALL_STATE_ACTIVE, 0);
+				if(CPVT_TEST_FLAG(cpvt, CALL_FLAG_CONFERENCE))
+					at_enqueue_conference(cpvt);
+			}
+			else
+			{
+				at_enqueue_hangup(&pvt->sys_chan, call_index);
+				ast_log (LOG_ERROR, "[%s] answered incoming call with not exists call idx %d, hanging up!\n", PVT_ID(pvt), call_index);
+			}
+		}
+		else
+			ast_log (LOG_ERROR, "[%s] answered not voice incoming call type '%d' idx %d, skipped\n", PVT_ID(pvt), call_type, call_index);
+		return 0;
+    }
+        
+    if (sscanf (str, "^DSCI:%d,%*d,6,%d,%*s", &call_index, &call_type) == 2 && call_type == 0)
+    {
+		int duration   = 0;
+		int end_status = 0;
+		int cc_cause   = 0;
+		struct cpvt * cpvt;
+		request_clcc(pvt);
+
+		ast_debug (1,	"[%s] CEND: call_index %d duration %d end_status %d cc_cause %d Line disconnected\n"
+					, PVT_ID(pvt), call_index, duration, end_status, cc_cause);
+
+		cpvt = pvt_find_cpvt(pvt, call_index);
+		if (cpvt)
+		{
+					if (pvt->call_estb) duration = uptime() - pvt->t0;
+					pvt->call_estb = 0;
+			CPVT_RESET_FLAGS(cpvt, CALL_FLAG_NEED_HANGUP);
+			PVT_STAT(pvt, calls_duration[cpvt->dir]) += duration;
+			change_channel_state(cpvt, CALL_STATE_RELEASED, cc_cause);
+			manager_event_cend(PVT_ID(pvt), call_index, duration, end_status, cc_cause);
+		}
+		return 0;
+    }
+
+
+    if (sscanf (str, "^DSCI:%d,%*d,2,%d,%*s", &call_index, &call_type) != 2)
+	{
+		ast_debug (1, "[%s] Irrelevant DSCI URC '%s'\n", PVT_ID(pvt), str);
+		return 0;
+	}
+
+	ast_debug (1, "[%s] DSCI Received call_index: %d call_type %d\n", PVT_ID(pvt), call_index, call_type);
+	if (call_type == CLCC_CALL_TYPE_VOICE)
+	{
+        if (pvt->is_simcom) {
+			sleep(1);
+			// voice_enable(pvt);
+        }
+
+		if (call_index >= MIN_CALL_IDX && call_index <= MAX_CALL_IDX)
+		{
+			cpvt->call_idx = call_index;
+			change_channel_state(cpvt, CALL_STATE_DIALING, 0);
+			request_clcc(pvt);
+		}
+	}
+	else
+	{
+		ast_log (LOG_ERROR, "[%s] ORIG event for non-voice call type '%d' index %d\n", PVT_ID(pvt), call_type, call_index);
+	}
+	return 0;
+}
+*/
+
 
 #if 0
 /*!
@@ -1952,6 +2162,9 @@ int at_response (struct pvt* pvt, const struct iovec iov[2], int iovcnt, at_res_
 				/* An error here is not fatal. Just keep going. */
 				at_response_csca (pvt, str);
 				return 0;
+
+			case RES_DSCI:
+				return at_response_dsci (pvt, str);
 
 			case RES_PARSE_ERROR:
 				ast_log (LOG_ERROR, "[%s] Error parsing result\n", PVT_ID(pvt));

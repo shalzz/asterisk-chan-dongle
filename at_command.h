@@ -67,6 +67,7 @@
 	_( AT_QPCMV,        "AT+QPCMV") \
 	/* for Simcom SIM7600 */ \
 	_( AT_CPCMREG,      "AT+CPCMREG") \
+	_( AT_DSCI,			"AT+DSCI=1") \
 	_( AT_DTMF,         "AT^DTMF") \
 	_( AT_E,            "ATE") \
 \
@@ -125,6 +126,7 @@ EXPORT_DECL int at_enqueue_delete_sms(struct cpvt *cpvt, int index);
 EXPORT_DECL int at_enqueue_hangup(struct cpvt *cpvt, int call_idx);
 EXPORT_DECL int at_enqueue_volsync(struct cpvt *cpvt);
 EXPORT_DECL int at_enqueue_clcc(struct cpvt *cpvt);
+EXPORT_DECL int at_enqueue_cpcmreg(struct cpvt *cpvt, int call_type);
 EXPORT_DECL int at_enqueue_activate(struct cpvt *cpvt);
 EXPORT_DECL int at_enqueue_flip_hold(struct cpvt *cpvt);
 EXPORT_DECL int at_enqueue_conference(struct cpvt *cpvt);

@@ -63,6 +63,7 @@ struct iovec;
 \
 	_( CLCC,        "+CLCC",        "+CLCC:") \
 	_( CCWA,        "+CCWA",        "+CCWA:") \
+	_( DSCI,        "^DSCI",        "^DSCI:") \
 /* AT_RESPONSES_TABLE */
 
 
